@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Emby.Plugins.Douban.Response;
@@ -182,5 +183,38 @@ namespace Emby.Plugins.Douban
             }
             return result;
         }
+        
+        public static string GetMovieNameByInfoName(string infoName)
+        {
+            var nameSplits = infoName.Split('.');
+            if (nameSplits.Length > 2)
+            {
+                return nameSplits[0];
+            }
+
+            var nameCharArray = infoName.ToCharArray();
+            if (!IsCharacter(nameCharArray[0]))
+            {
+                StringBuilder sb = new StringBuilder();
+                foreach (var c in nameCharArray)
+                {
+                    if (!IsCharacter(c))
+                    {
+                        sb.Append(c);
+                        continue;
+                    }
+                    break;
+                }
+
+                return sb.ToString();
+            }
+            return infoName;
+        }
+
+        public static bool IsCharacter(char c)
+        {
+            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        }
+
     }
 }

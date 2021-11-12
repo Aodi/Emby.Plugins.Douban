@@ -19,6 +19,7 @@ namespace Emby.Plugins.Douban.Providers
         public string Name => "Douban Emby Movie Provider";
         public int Order => 3;
         private readonly IHttpClient _httpClient;
+
         public MovieProvider(IHttpClient http, IJsonSerializer jsonSerializer,
             ILogger logger) : base(jsonSerializer, logger)
         {
@@ -26,28 +27,30 @@ namespace Emby.Plugins.Douban.Providers
             // Empty
         }
 
+       
         public async Task<MetadataResult<Movie>> GetMetadata(MovieInfo info,
             CancellationToken cancellationToken)
         {
-            _logger.LogCallerInfo($"[DOUBAN] Getting metadata for \"{info.Name}\"");
+            string movieName = GetMovieNameByInfoName(info.Name);
+            _logger.LogCallerInfo($"[DOUBAN] Getting metadata for \"{movieName}\"");
 
             string sid = info.GetProviderId(ProviderID);
             if (string.IsNullOrWhiteSpace(sid))
             {
-                var searchResults = await Search<Movie>(info.Name, cancellationToken);
+                var searchResults = await Search<Movie>(movieName, cancellationToken);
                 sid = searchResults.FirstOrDefault()?.Id;
             }
 
             if (string.IsNullOrWhiteSpace(sid))
             {
-                _logger.LogCallerInfo($"[DOUBAN] No sid found for \"{info.Name}\"");
+                _logger.LogCallerInfo($"[DOUBAN] No sid found for \"{movieName}\"");
                 return new MetadataResult<Movie>();
             }
 
             var result = await GetMetadata<Movie>(sid, cancellationToken);
             if (result.HasMetadata)
             {
-                _logger.LogCallerInfo($"[DOUBAN] Get the metadata of \"{info.Name}\" successfully!");
+                _logger.LogCallerInfo($"[DOUBAN] Get the metadata of \"{movieName}\" successfully!");
                 info.SetProviderId(ProviderID, sid);
             }
 
@@ -82,7 +85,7 @@ namespace Emby.Plugins.Douban.Providers
 
             foreach (Response.SearchTarget searchTarget in searchResults)
             {
-                _logger.LogCallerInfo("Cover_Url"+searchTarget?.Cover_Url);
+                _logger.LogCallerInfo("Cover_Url" + searchTarget?.Cover_Url);
 
                 var searchResult = new RemoteSearchResult()
                 {
@@ -96,6 +99,7 @@ namespace Emby.Plugins.Douban.Providers
 
             return results;
         }
+
         private string GetLocalUrl(string url, ImageType type = ImageType.Backdrop)
         {
             if (string.IsNullOrEmpty(url))
@@ -104,6 +108,7 @@ namespace Emby.Plugins.Douban.Providers
                 return url;
             return $"/emby/Plugins/alifeline_douban/Image?url={url}&type={type}";
         }
+
         Task<HttpResponseInfo> IRemoteSearchProvider.GetImageResponse(string url, CancellationToken cancellationToken)
         {
             _logger.Info("Mv GetImageResponse url:" + url);
@@ -111,6 +116,7 @@ namespace Emby.Plugins.Douban.Providers
             {
                 url = url.Replace("/emby/Plugins/alifeline_douban/Image?url=", "");
             }
+
             var res = _httpClient.GetResponse(new HttpRequestOptions
             {
                 Url = url,

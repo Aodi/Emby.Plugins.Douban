@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.Http;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +15,6 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Logging;
-using System.Linq;
 
 namespace Emby.Plugins.Douban.Providers
 {
@@ -24,22 +23,30 @@ namespace Emby.Plugins.Douban.Providers
         public string Name => "Douban Emby Image Provider";
         public int Order => 3;
         private readonly IHttpClient _httpClient;
+
         public ImageProvider(IJsonSerializer jsonSerializer,
-                             ILogger logger) : base(jsonSerializer, logger)
+            ILogger logger) : base(jsonSerializer, logger)
         {
             // empty
         }
 
-        public async Task<IEnumerable<RemoteImageInfo>> GetImages(BaseItem item, LibraryOptions libraryOptions, CancellationToken cancellationToken)
+        public async Task<IEnumerable<RemoteImageInfo>> GetImages(BaseItem item, LibraryOptions libraryOptions,
+            CancellationToken cancellationToken)
         {
-            _logger.LogCallerInfo($"[DOUBAN] GetImages for item: {item.Name}");
+            var itemName = GetMovieNameByInfoName(item.Name);
+            _logger.LogCallerInfo($"[DOUBAN] GetImages for item: {itemName}");
 
             var list = new List<RemoteImageInfo>();
             var sid = item.GetProviderId(ProviderID);
             if (string.IsNullOrWhiteSpace(sid))
             {
-                _logger.LogCallerInfo($"[DOUBAN] Got images failed because the sid of \"{item.Name}\" is empty!");
-                return list;
+                var searchResults = await Search<Movie>(itemName, cancellationToken);
+                sid = searchResults.FirstOrDefault()?.Id;
+                if (string.IsNullOrWhiteSpace(sid))
+                {
+                    _logger.LogCallerInfo($"[DOUBAN] Got images failed because the sid of \"{itemName}\" is empty!");
+                    return list;
+                }
             }
 
             var primaryList = await GetPrimary(sid, item is Movie ? "movie" : "tv", cancellationToken);
@@ -70,7 +77,8 @@ namespace Emby.Plugins.Douban.Providers
             CancellationToken cancellationToken)
         {
             var list = new List<RemoteImageInfo>();
-            var item = await _doubanClient.GetSubject(sid, (MediaType)Enum.Parse(typeof(MediaType), type), cancellationToken);
+            var item = await _doubanClient.GetSubject(sid, (MediaType) Enum.Parse(typeof(MediaType), type),
+                cancellationToken);
             list.Add(new RemoteImageInfo
             {
                 ProviderName = Name,
@@ -126,7 +134,8 @@ namespace Emby.Plugins.Douban.Providers
             {
                 url = url.Replace("/emby/Plugins/alifeline_douban/Image?url=", "");
             }
-            var res= _httpClient.GetResponse(new HttpRequestOptions
+
+            var res = _httpClient.GetResponse(new HttpRequestOptions
             {
                 Url = url
             });

@@ -256,7 +256,7 @@ namespace Emby.Plugins.Douban
             //httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", "Bearer accesstoken");
             HttpResponseMessage response = await httpClient.GetAsync(url, cancellationToken);
             string res = await response.Content.ReadAsStringAsync();
-            _logger.LogCallerInfo($"response.Content: {res}");
+            // _logger.LogCallerInfo($"response.Content: {res}");
             response.EnsureSuccessStatusCode();
             return response;
         }
